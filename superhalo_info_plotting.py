@@ -91,42 +91,58 @@ for i in range(len(superhalos)):
         im = ax.imshow(H, cmap=plt.cm.jet, extent=extent)
         fig.colorbar(im, ax=ax)
 
+    if i == 0:
+        superhalo_words = "largest halo"
+    else:
+        superhalo_words = "%s largest halo" % ordinal(i)
+
+    halostats = open("%s/halostats.txt" % superhalo_dir, 'w')
+
     masses = superhalo.get_data_for_field('particle_mass')
     plot(np.array(masses.array))
-    plt.title("Mass Distribution of superhalo %i" % i)
-    plt.xlabel("Mass")
+    plt.title("Mass Distribution of the %s" % superhalo_words)
+    plt.xlabel("Mass [%s]" % masses.array.units)
     plt.savefig("%s/mass.png" % superhalo_dir)
     plt.close()
+    halostats.write("Mean Mass: %f %s\n" % (masses.mean(), masses.mean().units))
+    halo_var = masses.var()
+    halostats.write("Mass Var: %f %s\n" % (np.sqrt(np.array(masses.var())), masses.var().units**0.5))
+    halostats.write("Mass Var is %f%% of Mean\n" % (100.*(np.sqrt(np.array(masses.var()))/np.array(masses.mean()))))
+    halostats.write("\n")
     
     virial_radius = superhalo.get_data_for_field('virial_radius')
     plot(np.array(virial_radius.array))
-    plt.title("Virial Radius Distribution of superhalo %i" % i)
-    plt.xlabel("Virial Radius")
+    plt.title("Virial Radius Distribution of the %s" % superhalo_words)
+    plt.xlabel("Virial Radius [%s]" % virial_radius.array.units)
     plt.savefig("%s/v_rad.png" % superhalo_dir)
     plt.close()
+    halostats.write("Mean Virial Radius: %f %s\n" % (virial_radius.mean(), virial_radius.mean().units))
+    halostats.write("Virial Radius Var: %f %s\n" % (np.sqrt(np.array(virial_radius.var())), virial_radius.var().units**0.5))
+    halostats.write("Virial Radius Var is %f%% of Mean\n" % (100.*(np.sqrt(np.array(virial_radius.var()))/np.array(virial_radius.mean()))))
+    halostats.write("\n")
     
     pos_x = superhalo.get_data_for_field('orig_particle_position_x')
     plot(np.array(pos_x.array))
-    plt.title("X Position Distribution of superhalo %i" % i)
-    plt.xlabel("X Position")
+    plt.title("X Position Distribution of the %s" % superhalo_words)
+    plt.xlabel("X Position [%s]" % pos_x.array.units)
     plt.savefig("%s/x_pos.png" % superhalo_dir)
     plt.close()
     
     pos_y = superhalo.get_data_for_field('orig_particle_position_y')
     plot(np.array(pos_y.array))
-    plt.title("Y Position Distribution of superhalo %i" % i)
-    plt.xlabel("Y Position")
+    plt.title("Y Position Distribution of the %s" % superhalo_words)
+    plt.xlabel("Y Position [%s]" % pos_y.array.units)
     plt.savefig("%s/y_pos.png" % superhalo_dir)
     plt.close()
     
     pos_z = superhalo.get_data_for_field('orig_particle_position_z')
     plot(np.array(pos_z.array))
-    plt.title("Z Position Distribution of superhalo %i" % i)
-    plt.xlabel("Z Position")
+    plt.title("Z Position Distribution of the %s" % superhalo_words)
+    plt.xlabel("Z Position [%s]" % pos_z.array.units)
     plt.savefig("%s/z_pos.png" % superhalo_dir)
     plt.close()
     
-    plot2d(np.array(pos_x.array),np.array(pos_y.array), "X-Y Position Distribution of superhalo %i" % i, "X Position", "Y Position", "Number of Simulations", num_bins=8)
+    plot2d(np.array(pos_x.array),np.array(pos_y.array), "X-Y Position Distribution of the %s" % superhalo_words, "X Position [%s]" % pos_x.array.units, "Y Position [%s]" % pos_y.array.units, "Number of Simulations", num_bins=8)
     plt.savefig("%s/x_y_pos.png" % superhalo_dir)
     plt.close()
     
@@ -134,3 +150,5 @@ for i in range(len(superhalos)):
     plot2d(np.array(num_halos.array),np.array(masses.array), "Halo mass versus number of halos found in sim", "Number of Halos found in sim", "Halo mass", "Number of Simulations", num_bins=8)
     plt.savefig("%s/num_halos_mass.png" % superhalo_dir)
     plt.close()
+
+    halostats.close()
