@@ -71,8 +71,14 @@ class path_manager(object):
             except:
                 pass
 
+def dataset_finished(dataset_path):
+    if os.path.isfile(os.path.join(dataset_path, "RunFinished")):
+        return True
+    else:
+        return False
+
 def get_run_time_from_dataset(dataset_path):
-    if not os.path.isfile(os.path.join(dataset_path, "RunFinished")):
+    if not dataset_finished(dataset_path):
         print("file %s doesn't exist!" % os.path.join(dataset_path, "RunFinished"))
         return 0.;
 

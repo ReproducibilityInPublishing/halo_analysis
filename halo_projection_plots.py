@@ -3,6 +3,7 @@ import yt
 from yt.analysis_modules.halo_analysis.api import HaloCatalog
 from halo_analysis_tools import *
 import argparse
+import sys
 
 parser = argparse.ArgumentParser()
 add_common_arguments(parser)
@@ -12,6 +13,11 @@ args = parser.parse_args()
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         sim_num=args.sim_number, snap_name=args.time_slice,
                         data_dir_prefix=args.data_prefix)
+
+if not dataset_finished(path_man.get_exp_path()):
+    print("Sim number %i is not yet finished. Skipping." % args.sim_number)
+    sys.exit(0)
+
 path_man.ensure_directories()
 
 catalog_ds = yt.load(path_man.get_rockstar_catalog_first_file())

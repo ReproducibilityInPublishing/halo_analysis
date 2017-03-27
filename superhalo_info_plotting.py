@@ -38,6 +38,10 @@ for sim_num in sim_numbers:
                             snap_name=config.get('superhalo_data', 'time_slice'),
                             data_dir_prefix=args.data_prefix)
 
+    if not dataset_finished(path_man.get_exp_path()):
+        print("Sim number %i is not yet finished. Skipping." % args.sim_number)
+        continue
+
     print("Creating catalog for sim {}".format(sim_num))
     catalog_helpers[sim_num] = catalog_helper(yt.load(path_man.get_rockstar_catalog_first_file()), sim_num,  banned_fields=['total_mass'])
     catalog_helpers[sim_num].cache_halos()

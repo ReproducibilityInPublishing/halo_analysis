@@ -5,6 +5,7 @@ from yt.data_objects.particle_filters import add_particle_filter
 from yt.analysis_modules.halo_finding.rockstar.api import RockstarHaloFinder
 from halo_analysis_tools import *
 import argparse
+import sys
 
 parser = argparse.ArgumentParser()
 add_common_arguments(parser)
@@ -25,6 +26,11 @@ add_particle_filter("dark_matter", function=DarkMatter, filtered_type='all', req
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         sim_num=args.sim_number, snap_name=args.time_slice,
                         data_dir_prefix=args.data_prefix)
+
+if not dataset_finished(path_man.get_exp_path()):
+    print("Sim number %i is not yet finished. Skipping." % args.sim_number)
+    sys.exit(0)
+
 if yt.is_root():
     path_man.ensure_directories()
 

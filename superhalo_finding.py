@@ -34,6 +34,11 @@ for sim_num in sim_numbers:
     path_man = path_manager(args.root_data_dir, args.root_output_dir,
                             sim_num=("%i" % sim_num), snap_name=args.time_slice,
                             data_dir_prefix=args.data_prefix)
+
+    if not dataset_finished(path_man.get_exp_path()):
+        print("Sim number %i is not yet finished. Skipping." % args.sim_number)
+        continue
+
     path_man.ensure_directories()
 
     print("Creating catalog for sim {}".format(sim_num))
