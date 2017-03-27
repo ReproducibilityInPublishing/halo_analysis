@@ -57,10 +57,16 @@ class path_manager(object):
     
     def ensure_directories(self):
         if not os.path.isdir(self.get_rockstar_root_dir()):
-            os.makedirs(self.get_rockstar_root_dir())
+            try:
+                os.makedirs(self.get_rockstar_root_dir())
+            except:
+                pass
 
         if not os.path.isdir(self.get_superhalo_root_dir()):
-            os.makedirs(self.get_superhalo_root_dir())
+            try:
+                os.makedirs(self.get_superhalo_root_dir())
+            except:
+                pass
 
 def get_run_time_from_dataset(dataset_path):
     if not os.path.isfile(os.path.join(dataset_path, "RunFinished")):

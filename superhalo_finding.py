@@ -64,4 +64,4 @@ print("There were {} superhalos".format(len(config.get('superhalo_data', 'superh
 config_file = open(path_man.get_superhalo_config_file(), 'w')
 config.write(config_file)
 
-print("Superhalos written to {}".format(args.superhalo_config_file))
+print("Superhalos written to {}".format(path_man.get_superhalo_config_file()))
