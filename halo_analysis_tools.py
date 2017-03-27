@@ -34,8 +34,11 @@ class path_manager(object):
         self.sim_num = sim_num
         self.snap_name = snap_name
 
+    def get_exp_path(self):
+        return os.path.join(self.data_root_directory, self.data_dir_prefix + self.sim_num)
+
     def get_dataset_path(self):
-        return os.path.join(self.data_root_directory, self.data_dir_prefix + self.sim_num, self.snap_name, self.snap_name)
+        return os.path.join(self.get_exp_path(), self.snap_name, self.snap_name)
 
     def get_superhalo_root_dir(self):
         return os.path.join(self.output_root_directory, self.superhalo_prefix)
@@ -70,6 +73,7 @@ class path_manager(object):
 
 def get_run_time_from_dataset(dataset_path):
     if not os.path.isfile(os.path.join(dataset_path, "RunFinished")):
+        print("file %s doesn't exist!" % os.path.join(dataset_path, "RunFinished"))
         return 0.;
 
     output_log = open(os.path.join(dataset_path, "OutputLog"), 'r')
