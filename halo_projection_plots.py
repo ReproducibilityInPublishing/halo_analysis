@@ -12,6 +12,7 @@ args = parser.parse_args()
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         sim_num=args.sim_number, snap_name=args.time_slice,
                         data_dir_prefix=args.data_prefix)
+path_man.ensure_directories()
 
 catalog_ds = yt.load(path_man.get_rockstar_catalog_first_file())
 ds = yt.load(path_man.get_dataset_path())

@@ -25,6 +25,8 @@ add_particle_filter("dark_matter", function=DarkMatter, filtered_type='all', req
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         sim_num=args.sim_number, snap_name=args.time_slice,
                         data_dir_prefix=args.data_prefix)
+path_man.ensure_directories()
+
 
 ds = yt.load(path_man.get_dataset_path())
 ds.add_particle_filter('dark_matter')

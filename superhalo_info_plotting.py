@@ -39,6 +39,7 @@ for sim_num in sim_numbers:
 
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         data_dir_prefix=args.data_prefix)
+path_man.ensure_directories()
 
 num_halos = np.array(num_halos)
 plt.hist(num_halos)

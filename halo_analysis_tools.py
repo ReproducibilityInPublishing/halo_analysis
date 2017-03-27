@@ -33,25 +33,34 @@ class path_manager(object):
         self.output_root_directory = output_root_directory
         self.sim_num = sim_num
         self.snap_name = snap_name
-    
+
     def get_dataset_path(self):
         return os.path.join(self.data_root_directory, self.data_dir_prefix + self.sim_num, self.snap_name, self.snap_name)
-    
+
+    def get_superhalo_root_dir(self):
+        return os.path.join(self.output_root_directory, self.superhalo_prefix)
+
+    def get_rockstar_root_dir(self):
+        return os.path.join(self.output_root_directory, self.rockstar_prefix)
+ 
     def get_rockstar_catalogue_dirname(self):
-        return os.path.join(self.output_root_directory, self.rockstar_prefix, self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name)
+        return os.path.join(self.get_rockstar_root_dir(), self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name)
     
     def get_rockstar_halo_dirname(self):
-        return os.path.join(self.output_root_directory, self.rockstar_prefix, self.rockstar_halo_prefix+self.sim_num+"_"+self.snap_name)
+        return os.path.join(self.get_rockstar_root_dir(), self.rockstar_halo_prefix+self.sim_num+"_"+self.snap_name)
         
     def get_rockstar_catalog_first_file(self):
         return os.path.join(self.get_rockstar_catalogue_dirname(), self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name+".0.h5")
 
-    def get_superhalo_root_dir(self):
-        return os.path.join(self.output_root_directory, self.superhalo_prefix)
-    
     def get_superhalo_config_file(self):
         return os.path.join(self.get_superhalo_root_dir(), "superhalos.conf")
-        
+    
+    def ensure_directories(self):
+        if not os.path.isdir(self.get_rockstar_root_dir()):
+            os.makedirs(self.get_rockstar_root_dir())
+
+        if not os.path.isdir(self.get_superhalo_root_dir()):
+            os.makedirs(self.get_superhalo_root_dir())
 
 def save_quantities(halo, prefix, fields):
     for field in fields:

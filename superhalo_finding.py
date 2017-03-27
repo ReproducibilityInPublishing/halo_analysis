@@ -34,6 +34,7 @@ for sim_num in sim_numbers:
     path_man = path_manager(args.root_data_dir, args.root_output_dir,
                             sim_num=("%i" % sim_num), snap_name=args.time_slice,
                             data_dir_prefix=args.data_prefix)
+    path_man.ensure_directories()
 
     print("Creating catalog for sim {}".format(sim_num))
     catalog_helpers[sim_num] = catalog_helper(yt.load(path_man.get_rockstar_catalog_first_file()), sim_num,  banned_fields=['total_mass'])
@@ -41,6 +42,7 @@ for sim_num in sim_numbers:
     config.get('superhalo_data', 'sim_numbers').append(sim_num)
 
 path_man = path_manager(args.root_data_dir, args.root_output_dir, data_dir_prefix=args.data_prefix)
+path_man.ensure_directories()
     
 for sim in catalog_helpers:
     print("Finding nearest neighbors for sim {}".format(sim))
