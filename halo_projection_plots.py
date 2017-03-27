@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 import yt
 from yt.analysis_modules.halo_analysis.api import HaloCatalog
-from halo_analysis_tools import path_manager
+from halo_analysis_tools import *
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-n", "--sim-number", help="The simulation number to look at", type=str, required=True)
-parser.add_argument("-s", "--time-slice", help="The time slice to look at", type=str, default="RD0011")
-
+add_common_arguments(parser)
+add_single_sim(parser)
 args = parser.parse_args()
 
-path_man = path_manager(args.sim_number, args.time_slice)
+path_man = path_manager(args.root_data_dir, args.root_output_dir,
+                        sim_num=args.sim_number, snap_name=args.time_slice,
+                        data_dir_prefix=args.data_prefix)
 
 catalog_ds = yt.load(path_man.get_rockstar_catalog_first_file())
 ds = yt.load(path_man.get_dataset_path())

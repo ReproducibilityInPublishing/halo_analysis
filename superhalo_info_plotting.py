@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--superhalo-config-file", help="The filepath to store superhalo information", type=str, default="superhalos.conf")
-
+add_common_arguments(parser)
 args = parser.parse_args()
 
 config = ConfigParser.ConfigParser()
@@ -28,18 +27,24 @@ superhalo_chains = json.loads(config.get('superhalo_data', 'superhalos'))
 num_halos = []
 
 for sim_num in sim_numbers:
-    path_man = path_manager("%i" % sim_num, config.get('superhalo_data', 'time_slice'))
+    path_man = path_manager(args.root_data_dir, args.root_output_dir, 
+                            sim_num=("%i" % sim_num),
+                            snap_name=config.get('superhalo_data', 'time_slice'),
+                            data_dir_prefix=args.data_prefix)
 
     print("Creating catalog for sim {}".format(sim_num))
     catalog_helpers[sim_num] = catalog_helper(yt.load(path_man.get_rockstar_catalog_first_file()), sim_num,  banned_fields=['total_mass'])
     catalog_helpers[sim_num].cache_halos()
     num_halos.append(len(catalog_helpers[sim_num]))
-    
+
+path_man = path_manager(args.root_data_dir, args.root_output_dir,
+                        data_dir_prefix=args.data_prefix)
+
 num_halos = np.array(num_halos)
 plt.hist(num_halos)
 plt.xlabel("Number of halos found")
 plt.ylabel("Number of Simulations")
-plt.savefig("superhalos/num_halos.png")
+plt.savefig(path_man.get_superhalo_root_dir() + "/num_halos.png")
 plt.close()
     
 superhalos = []
@@ -49,7 +54,7 @@ for chain in superhalo_chains:
 
 for i in range(len(superhalos)):
     print("Producing plots for superhalo %i" % i)
-    superhalo_dir = "superhalos/halo_%i" % i
+    superhalo_dir = path_man.get_superhalo_root_dir() + "/halo_%i" % i
     if not os.path.isdir(superhalo_dir):
         os.makedirs(superhalo_dir)
     

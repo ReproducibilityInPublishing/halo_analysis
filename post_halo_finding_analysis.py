@@ -6,14 +6,15 @@ from halo_analysis_tools import *
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-n", "--sim-number", help="The simulation number to look at", type=str, required=True)
-parser.add_argument("-s", "--time-slice", help="The time slice to look at", type=str, default="RD0011")
-
+add_common_arguments(parser)
+add_single_sim(parser)
 args = parser.parse_args()
 
 yt.enable_parallelism()
 
-path_man = path_manager(args.sim_number, args.time_slice)
+path_man = path_manager(args.root_data_dir, args.root_output_dir,
+                        sim_num=args.sim_number, snap_name=args.time_slice,
+                        data_dir_prefix=args.data_prefix)
 
 ds = yt.load(path_man.get_dataset_path())
 halos_ds = yt.load(path_man.get_rockstar_halo_dirname()+"/halos_0.0.bin")

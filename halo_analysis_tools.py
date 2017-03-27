@@ -1,3 +1,5 @@
+import os
+
 from yt.analysis_modules.halo_analysis.halo_callbacks import add_callback
 from yt.analysis_modules.cosmological_observation.light_ray.light_ray import periodic_distance
 from yt.utilities.logger import ytLogger as mylog
@@ -7,28 +9,48 @@ from yt import uconcatenate
 
 import numpy as np
 
+def add_common_arguments(parser):
+    parser.add_argument("-d", "--root-data-dir", help="The root directory within which the data is found", type=str, required=True)
+    parser.add_argument("-dp", "--data-prefix", help="The prefix to affix to directories within the data directory", type=str, default="")
+    parser.add_argument("-o", "--root-output-dir", help="The root directory within which output will be written", type=str, required=True)
+    parser.add_argument("-s", "--time-slice", help="The time slice to look at", type=str, default="RD0011")
+
+def add_single_sim(parser):
+    parser.add_argument("-n", "--sim-number", help="The simulation number to look at", type=str, required=True)
+
+def add_multi_sim(parser):
+    parser.add_argument("--sim-numbers", help="A list of simulation numbers to look at", type=int, nargs="*", action='append')
+
 class path_manager(object):
-    root_directory = "/home/matthew/Software/NCSA/Vertical/GalaxyFormation/Enzo/play-area/gas_plus_dm_amr_multiphys/campuscluster/"
-    dir_prefix = "gas_plus_dm_amr_multiphys_32_"
     rockstar_catalog_prefix = "rockstar_catalog_"
     rockstar_halo_prefix = "rockstar_halos_"
     rockstar_prefix = "rockstar"
+    superhalo_prefix = "superhalos"
     
-    def __init__(self, sim_num, snap_name):
+    def __init__(self, data_root_directory, output_root_directory, sim_num=0, snap_name="RD0011", data_dir_prefix=""):
+        self.data_root_directory = data_root_directory
+        self.data_dir_prefix = data_dir_prefix
+        self.output_root_directory = output_root_directory
         self.sim_num = sim_num
         self.snap_name = snap_name
     
     def get_dataset_path(self):
-        return self.root_directory+self.dir_prefix+self.sim_num+"/"+self.snap_name+"/"+self.snap_name
+        return os.path.join(self.data_root_directory, self.data_dir_prefix + self.sim_num, self.snap_name, self.snap_name)
     
     def get_rockstar_catalogue_dirname(self):
-        return self.rockstar_prefix + "/" + self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name
+        return os.path.join(self.output_root_directory, self.rockstar_prefix, self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name)
     
     def get_rockstar_halo_dirname(self):
-        return self.rockstar_prefix + "/" + self.rockstar_halo_prefix+self.sim_num+"_"+self.snap_name
+        return os.path.join(self.output_root_directory, self.rockstar_prefix, self.rockstar_halo_prefix+self.sim_num+"_"+self.snap_name)
         
     def get_rockstar_catalog_first_file(self):
-        return self.get_rockstar_catalogue_dirname()+"/"+self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name+".0.h5"
+        return os.path.join(self.get_rockstar_catalogue_dirname(), self.rockstar_catalog_prefix+self.sim_num+"_"+self.snap_name+".0.h5")
+
+    def get_superhalo_root_dir(self):
+        return os.path.join(self.output_root_directory, self.superhalo_prefix)
+    
+    def get_superhalo_config_file(self):
+        return os.path.join(self.get_superhalo_root_dir(), "superhalos.conf")
         
 
 def save_quantities(halo, prefix, fields):
