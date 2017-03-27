@@ -25,6 +25,7 @@ sim_numbers = json.loads(config.get('superhalo_data', 'sim_numbers'))
 superhalo_chains = json.loads(config.get('superhalo_data', 'superhalos'))
 
 num_halos = []
+job_time = []
 
 for sim_num in sim_numbers:
     path_man = path_manager(args.root_data_dir, args.root_output_dir, 
@@ -36,6 +37,7 @@ for sim_num in sim_numbers:
     catalog_helpers[sim_num] = catalog_helper(yt.load(path_man.get_rockstar_catalog_first_file()), sim_num,  banned_fields=['total_mass'])
     catalog_helpers[sim_num].cache_halos()
     num_halos.append(len(catalog_helpers[sim_num]))
+    job_time.append(get_run_time_from_dataset(path_man.get_dataset_path()))
 
 path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         data_dir_prefix=args.data_prefix)
@@ -46,6 +48,13 @@ plt.hist(num_halos)
 plt.xlabel("Number of halos found")
 plt.ylabel("Number of Simulations")
 plt.savefig(path_man.get_superhalo_root_dir() + "/num_halos.png")
+plt.close()
+
+job_time = np.array(job_time)
+plt.hist(job_time)
+plt.xlabel("Job Completion Time [Hours]")
+plt.ylabel("Number of Simulations")
+plt.savefig(path_man.get_superhalo_root_dir() + "/job_times.png")
 plt.close()
     
 superhalos = []

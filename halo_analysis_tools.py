@@ -62,6 +62,17 @@ class path_manager(object):
         if not os.path.isdir(self.get_superhalo_root_dir()):
             os.makedirs(self.get_superhalo_root_dir())
 
+def get_run_time_from_dataset(dataset_path):
+    if not os.path.isfile(os.path.join(dataset_path, "RunFinished")):
+        return 0.;
+
+    output_log = open(os.path.join(dataset_path, "OutputLog"), 'r')
+    lines = output_log.readlines()
+    output_log.close()
+    start = float(lines[0].split()[5])
+    end = float(lines[11].split()[5])
+    return (end-start)/3600.
+
 def save_quantities(halo, prefix, fields):
     for field in fields:
 	new_field = "%s_%s" % (prefix,field)
