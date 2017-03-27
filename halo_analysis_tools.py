@@ -57,10 +57,16 @@ class path_manager(object):
     
     def ensure_directories(self):
         if not os.path.isdir(self.get_rockstar_root_dir()):
-            os.makedirs(self.get_rockstar_root_dir())
+            try:
+                os.makedirs(self.get_rockstar_root_dir())
+            except:
+                pass
 
         if not os.path.isdir(self.get_superhalo_root_dir()):
-            os.makedirs(self.get_superhalo_root_dir())
+            try:
+                os.makedirs(self.get_superhalo_root_dir())
+            except:
+                pass
 
 def save_quantities(halo, prefix, fields):
     for field in fields:
