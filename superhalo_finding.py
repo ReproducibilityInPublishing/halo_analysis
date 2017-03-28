@@ -36,7 +36,7 @@ for sim_num in sim_numbers:
                             data_dir_prefix=args.data_prefix)
 
     if not dataset_finished(path_man.get_exp_path()):
-        print("Sim number %s is not yet finished. Skipping." % args.sim_number)
+        print("Sim number %i is not yet finished. Skipping." % sim_num)
         continue
 
     path_man.ensure_directories()
