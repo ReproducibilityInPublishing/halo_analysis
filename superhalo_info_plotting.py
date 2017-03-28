@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+#Prevent matplotlib from using an X backend.
+import matplotlib
+matplotlib.use('Agg')
+
 import yt
 from yt.analysis_modules.halo_analysis.api import HaloCatalog
 from halo_analysis_tools import *
