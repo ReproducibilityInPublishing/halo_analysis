@@ -1,4 +1,5 @@
 import os
+import copy
 
 from yt.analysis_modules.halo_analysis.halo_callbacks import add_callback
 from yt.analysis_modules.cosmological_observation.light_ray.light_ray import periodic_distance
@@ -21,6 +22,185 @@ def add_single_sim(parser):
 def add_multi_sim(parser):
     parser.add_argument("--sim-numbers", help="A list of simulation numbers to look at", type=int, nargs="*", action='append')
 
+def add_parallel_arg(parser):
+    parser.add_argument("-j", help="Number of threads to use for data processing", dest='threads', default=1, type=int)
+
+class BoundOverrunError(Exception):
+    def __str__(self):
+        return "A bound was exceeded"
+
+class BoundUnderunError(Exception):
+    def __str__(self):
+        return "A value less than 0 is not allowed."
+
+class NoPossiblePairsError(Exception):
+    def __str__(self):
+        return "No pairs are possible!"
+
+class NonExclusiveError(Exception):
+    def __str__(self):
+        return "Two values in an exclusive pair key are not allowed to be the same."
+
+class IncorrectOrderError(Exception):
+    def __str__(self):
+        return "The right value must always be larger than the left value"
+
+class NoMoreValuesError(Exception):
+    pass
+
+class PairKey(object):
+    def __init__(self, N, left=0, right=1):
+        if N <= 1:
+            raise NoPossiblePairsError
+        self._N = N
+        self._left = left
+        self._right = right
+        self.check_for_exceptions()
+
+    def check_for_exceptions(self):
+        if self._left < 0 or self._right < 0:
+            raise BoundUnderunError
+        elif self._left >= self.N or self._right >= self.N:
+            raise BoundOverrunError
+        elif self._left == self._right:
+            raise NonExclusiveError
+        elif self._left > self._right:
+            raise IncorrectOrderError
+
+    def advance(self):
+        if (self.right + 1) == self.N:
+            if (self.left + 1) == self.right:
+                raise NoMoreValuesError
+            else:
+                self._left = self._left + 1
+                self._right = self._left + 1
+        else:
+            self._right += 1
+
+        self.check_for_exceptions()
+
+    @property
+    def N(self):
+        return self._N
+
+    @property
+    def left(self):
+        return self._left
+
+    @left.setter
+    def left(self, value):
+        if value < 0:
+            raise BoundUnderunError
+        elif value >= self.N:
+            raise BoundOverrunError
+        elif value == self.right:
+            raise NonExclusiveError
+        else:
+            self._left = value
+
+    @property
+    def right(self):
+        return self._right
+
+    @right.setter
+    def right(self, value):
+        if value < 0:
+            raise BoundUnderunError
+        elif value >= self.N:
+            raise BoundOverrunError
+        elif value == self.left:
+            raise NonExclusiveError
+        else:
+            self._right = value
+
+    def __eq__(self, other):
+        if self.left == other.left:
+            if self.right == other.right:
+                return True
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if self._left < other._left:
+            return True
+        else:
+            if self._right < other._right:
+                return True
+            else:
+                return False
+    
+    def __le__(self, other):
+        if self.__lt__(other) or self.__eq__(other):
+            return True
+        else:
+            return False
+
+    def __gt__(self, other):
+        if self._left > other._left:
+            return True
+        else:
+            if self._right > other._right:
+                return True
+            else:
+                return False
+
+    def __ge__(self, other):
+        if self.__gt__(other) or self.__eq__(other):
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return "{{ {}, {} }}".format(self._left, self._right)
+
+class PairKeyIterator(object):
+    def __init__(self, N):
+        self.current = PairKey(N)
+        self.end = False
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.end:
+            raise StopIteration
+
+        old = copy.deepcopy(self.current)
+        try:
+            self.current.advance()
+        except:
+            self.end = True
+        
+        return old
+
+class MappedPairKey(PairKey):
+    def __init__(self, _dict, left=0, right=1):
+        self.key_map = {}
+        self.map_key = {}
+        i = 0
+        for key in _dict:
+            self.key_map[key] = i
+            self.map_key[i] = key
+            i += 1
+
+        super(MappedPairKey,self).__init__(len(_dict), left, right) 
+        #self.left_data = _dict[self.map_key[left]]
+        #self.right_data = _dict[self.map_key[right]]
+    
+    def left_key(self):
+        return self.map_key[self._left]
+
+    def right_key(self):
+        return self.map_key[self._right]
+
+class MappedPairKeyIterator(PairKeyIterator):
+    def __init__(self, _dict):
+        self.current = MappedPairKey(_dict)
+        self.end = False
+        
+            
 class path_manager(object):
     rockstar_catalog_prefix = "rockstar_catalog_"
     rockstar_halo_prefix = "rockstar_halos_"
