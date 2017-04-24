@@ -6,13 +6,6 @@ find_package(PkgConfig)
 pkg_check_modules(libconfig++ REQUIRED libconfig++)
 pkg_check_modules(ArgParse REQUIRED ArgParse)
 
-message(STATUS "ArgParse_INCLUDEDIR: " ${ArgParse_INCLUDEDIR})
-message(STATUS "ArgParse_LIBDIR: " ${ArgParse_LIBDIR})
-message(STATUS "ArgParse_LDFLAGS: " ${ArgParse_LDFLAGS})
-message(STATUS "libconfig++_INCLUDEDIR: " ${libconfig++_INCLUDEDIR})
-message(STATUS "libconfig++_LIBDIR: " ${libconfig++_LIBDIR})
-message(STATUS "libconfig++_LDFLAGS: " ${libconfig++_LDFLAGS})
-
 include_directories(${ArgParse_INCLUDEDIR} ${libconfig++_INCLUDEDIR})
 
 add_executable(superhalo_finding superhalo_finding.cpp)
