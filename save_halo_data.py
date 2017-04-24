@@ -40,9 +40,9 @@ for sim_num in sim_numbers:
     sim_repr = {}
     sim_repr['time_slice'] = args.time_slice
     sim_repr['sim_num'] = sim_num
-    sim_repr['halos'] = []
+    sim_repr['halos'] = ()
     for halo in helper:
-        sim_repr['halos'].append(halo.get_config_representation())
+        sim_repr['halos'] = sim_repr['halos'] + (halo.get_config_representation(),)
 
     with open(path_man.get_rockstar_catalogue_dirname()+"/halos.cfg", 'w') as halos_catalog:
         halos_catalog.write(libconf.dumps(sim_repr))
