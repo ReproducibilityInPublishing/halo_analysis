@@ -419,7 +419,10 @@ class halo_object(object):
                 print("Warning! Not saving key '{}' because it is not a scalar!".format(key))
                 continue
             new_value_dict = {}
-            new_value_dict["value"] = float(self.val_dict[key].value)
+            if key == "particle_identifier":
+                new_value_dict["value"] = int(self.val_dict[key].value)
+            else:
+                new_value_dict["value"] = float(self.val_dict[key].value)
             new_value_dict["unit"] = str(self.val_dict[key].units)
             repr_dict[key] = new_value_dict
         return repr_dict
