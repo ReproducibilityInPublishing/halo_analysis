@@ -5,6 +5,7 @@
 #include <string>
 #include <map>
 #include <limits>
+#include <algorithm>
 
 #include "ArgParse/ArgParse.h"
 
@@ -216,6 +217,9 @@ class SimHalos {
 	public:
 		SimHalos();
 		std::map<int, Halo>& getHalos() {
+			return this->halos;
+		}
+		const std::map<int, Halo>& getConstHalos() const {
 			return this->halos;
 		}
 		void setHalos(std::map<int, Halo>&& halos) {
@@ -551,6 +555,20 @@ int main(int argc, char** argv) {
 			superhalos.getSuperhalos().push_back(superhalo_candidate);
 		}
 	}
+
+	auto superhalo_sort_func = [SimMap](const superhalo& a, const superhalo& b) {
+		if(a.size() > b.size()) {
+			return true;
+		} else {
+			if(SimMap.at(a.begin()->first).getConstHalos().at(a.begin()->second).getParticleMass() > SimMap.at(b.begin()->first).getConstHalos().at(b.begin()->second).getParticleMass()) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	};
+
+	sort(superhalos.getSuperhalos().begin(), superhalos.getSuperhalos().end(), superhalo_sort_func);
 
 	FILE* output_file = fopen(output_filepath.c_str(), "w");
 	if(output_file == 0) {
