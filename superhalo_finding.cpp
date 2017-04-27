@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <limits>
 
 #include "ArgParse/ArgParse.h"
 
@@ -429,15 +430,51 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	int num_pairs = 0;
 	//Find Superhalos
 	UniquePairManager<int, SimHalos> unique_pair_manager(SimMap);
 	while(not unique_pair_manager.is_finished()) {
-		++num_pairs;
-		printf("Looking at sim pair (%i[%i]) (%i[%i])\n", unique_pair_manager.getLowNum(), unique_pair_manager.getLowNumIdx(), unique_pair_manager.getHighNum(), unique_pair_manager.getHighNumIdx());
+		SimHalos& sim_low = SimMap[unique_pair_manager.getLowNum()];
+		SimHalos& sim_high = SimMap[unique_pair_manager.getHighNum()];
+
+		//Calculate distances
+		double dists[sim_low.size()][sim_high.size()];
+
+		for(size_t sim_low_halo_i = 0; sim_low_halo_i < sim_low.size(); ++sim_low_halo_i) {
+			for(size_t sim_high_halo_i = 0; sim_high_halo_i < sim_high.size(); ++sim_high_halo_i) {
+				Halo& halo_low = sim_low.getHalos()[sim_low_halo_i];
+				Halo& halo_high = sim_high.getHalos()[sim_high_halo_i];
+
+				dists[sim_low_halo_i][sim_high_halo_i] = HaloDistance(halo_low, halo_high);
+			}
+		}
+
+		for(size_t sim_low_halo_i = 0; sim_low_halo_i < sim_low.size(); ++sim_low_halo_i) {
+			double min_dist = std::numeric_limits<double>::infinity();
+			size_t min_high_halo_i = 0;
+			for(size_t sim_high_halo_i = 0; sim_high_halo_i < sim_high.size(); ++sim_high_halo_i) {
+				if (dists[sim_low_halo_i][sim_high_halo_i] < min_dist) {
+					min_dist = dists[sim_low_halo_i][sim_high_halo_i];
+					min_high_halo_i = sim_high_halo_i;
+				}
+			}
+			nearest_neighbor_maps[sim_low.getSimNum()][sim_low.getHalos()[sim_low_halo_i].getParticleIdentifier()][sim_high.getSimNum()] = sim_high.getHalos()[min_high_halo_i].getParticleIdentifier();
+		}
+
+		for(size_t sim_high_halo_i = 0; sim_high_halo_i < sim_high.size(); ++sim_high_halo_i) {
+			double min_dist = std::numeric_limits<double>::infinity();
+			size_t min_low_halo_i = 0;
+			for(size_t sim_low_halo_i = 0; sim_low_halo_i < sim_low.size(); ++sim_low_halo_i) {
+				if (dists[sim_low_halo_i][sim_high_halo_i] < min_dist) {
+					min_dist = dists[sim_low_halo_i][sim_high_halo_i];
+					min_low_halo_i = sim_low_halo_i;
+				}
+			}
+			nearest_neighbor_maps[sim_high.getSimNum()][sim_high.getHalos()[sim_high_halo_i].getParticleIdentifier()][sim_low.getSimNum()] = sim_low.getHalos()[min_low_halo_i].getParticleIdentifier();
+		}
+
 		unique_pair_manager.advance();
 	}
-	printf("There were %i pairs out of %i pairs\n", num_pairs, unique_pair_manager.size());
+
 
 	return 0;
 }
