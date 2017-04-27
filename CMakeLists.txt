@@ -4,7 +4,9 @@ project (halo_analysis)
 find_package(PkgConfig)
 
 pkg_check_modules(libconfig++ REQUIRED libconfig++)
-pkg_check_modules(ArgParse REQUIRED ArgParse)
+pkg_check_modules(ArgParse REQUIRED ArgParse>=0.7.0)
+
+add_definitions(-std=c++11 -Wall -Wextra -Werror)
 
 include_directories(${ArgParse_INCLUDEDIR} ${libconfig++_INCLUDEDIR})
 
