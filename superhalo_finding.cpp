@@ -1,6 +1,9 @@
 #include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <vector>
 #include <string>
+#include <map>
 
 #include "ArgParse/ArgParse.h"
 
@@ -182,13 +185,39 @@ int Halo::setFromSetting(const libconfig::Setting& halo_setting) {
 	return 0;
 }
 
+double HaloDistance(Halo& A, Halo& B) {
+	double metric = 0.;
+
+	static const double mass_factor = 1./3.;
+	double mass_part_A = std::fabs(A.getParticleMass()-B.getParticleMass());
+	double mass_part_B = std::fabs((1./A.getParticleMass())-(1./B.getParticleMass()));
+	metric += (mass_part_A*mass_part_B)/(2*mass_factor);
+
+	static const double radius_factor = 0.25/4.1;
+	double radius_part_A = std::fabs(A.getVirialRadius()-B.getVirialRadius());
+	double radius_part_B = std::fabs((1./A.getVirialRadius())-(1./B.getVirialRadius()));
+	metric += (radius_part_A*radius_part_B)/(2*radius_factor);
+
+	static const double position_factor = 0.25e23; // in 'cm'
+	double pos_part_x = std::fabs(A.getOrigParticlePosition(0)-B.getOrigParticlePosition(0));
+	metric += pos_part_x/position_factor;
+
+	double pos_part_y = std::fabs(A.getOrigParticlePosition(1)-B.getOrigParticlePosition(1));
+	metric += pos_part_y/position_factor;
+
+	double pos_part_z = std::fabs(A.getOrigParticlePosition(2)-B.getOrigParticlePosition(2));
+	metric += pos_part_z/position_factor;
+
+	return metric;
+}
+
 class SimHalos {
 	public:
 		SimHalos();
-		std::vector<Halo>& getHalos() {
+		std::map<int, Halo>& getHalos() {
 			return this->halos;
 		}
-		void setHalos(std::vector<Halo>&& halos) {
+		void setHalos(std::map<int, Halo>&& halos) {
 			this->halos = halos;
 		}
 		size_t size() const {
@@ -206,14 +235,21 @@ class SimHalos {
 		void setTimeSlice(const std::string& time_slice) {
 			this->time_slice = time_slice;
 		}
+		const std::string& getFilePath() const {
+			return this->filepath;
+		}
+		void setFilePath(const std::string& filepath) {
+			this->filepath = filepath;
+		}
 
 		int setFromSetting(libconfig::Setting& sim_setting);
 
 
 	private:
-		std::vector<Halo> halos;
+		std::map<int, Halo> halos;
 		int sim_num;
 		std::string time_slice;
+		std::string filepath;
 };
 
 SimHalos::SimHalos() {
@@ -234,16 +270,15 @@ int SimHalos::setFromSetting(libconfig::Setting& sim_setting) {
 		return -1;
 	}
 
-	std::vector<Halo> halo_list;
+	std::map<int, Halo> halo_list;
 	libconfig::Setting& halos = sim_setting.lookup("halos");
-	halo_list.reserve(halos.getLength());
 	for(int i=0; i< halos.getLength(); ++i) {
 		libconfig::Setting& halo = halos[i];
 		Halo new_halo;
 		if(new_halo.setFromSetting(halo) < 0) {
 			printf("Warning! Couldn't get halo from settings!\n");
 		} else {
-			halo_list.push_back(std::move(new_halo));
+			halo_list[new_halo.getParticleIdentifier()] = std::move(new_halo);
 		}
 	}
 
@@ -251,6 +286,73 @@ int SimHalos::setFromSetting(libconfig::Setting& sim_setting) {
 	this->setTimeSlice(time_slice);
 	this->setHalos(std::move(halo_list));
 	return 0;
+}
+
+template<class S, class T>
+class UniquePairManager {
+	typedef std::map<S, T> map_type;
+	public:
+		UniquePairManager(map_type& spawned_map);
+		S getLowNum() const {
+			return this->sim_num_vec[this->low_i];
+		}
+		int getLowNumIdx() const {
+			return this->low_i;
+		}
+		S getHighNum() const {
+			return this->sim_num_vec[this->high_i];
+		}
+		int getHighNumIdx() const {
+			return this->high_i;
+		}
+		int size() const {
+			return (this->sim_num_vec.size()*(this->sim_num_vec.size()-1))/2.;
+		}
+		void advance();
+		bool is_finished();
+
+	private:
+		int low_i;
+		int high_i;
+		bool finished;
+		std::vector<int> sim_num_vec;
+};
+
+template<class S, class T>
+UniquePairManager<S,T>::UniquePairManager(map_type& spawned_map) {
+	for(auto map_it = spawned_map.begin(); map_it != spawned_map.end(); ++map_it) {
+		sim_num_vec.push_back(map_it->first);
+	}
+	low_i = 0;
+	high_i = 1;
+	finished = false;
+}
+
+template<class S, class T>
+bool UniquePairManager<S,T>::is_finished() {
+	return this->finished;
+}
+
+template<class S, class T>
+void UniquePairManager<S,T>::advance() {
+	if (is_finished()) {
+		return;
+	}
+
+	if (high_i < (int)(this->sim_num_vec.size()-1)) {
+		high_i += 1;
+	} else {
+		if (low_i < (int)(this->sim_num_vec.size() - 2)) {
+			low_i += 1;
+			high_i = low_i + 1;
+		} else {
+			if (!this->finished) {
+				this->finished = true;
+			}
+			return;
+		}
+	}
+	return;
 }
 
 int main(int argc, char** argv) {
@@ -266,7 +368,11 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	std::vector<SimHalos> SimGroup;
+	//Load sims
+	std::string first_time_slice;
+	bool first = true;
+
+	std::map<int, SimHalos> SimMap;
 	for(auto filepaths_i = sim_halo_data_filepaths.begin(); filepaths_i < sim_halo_data_filepaths.end(); ++filepaths_i) {
 		std::string filepath = *filepaths_i;
 		libconfig::Config config;
@@ -279,9 +385,59 @@ int main(int argc, char** argv) {
 			printf("There was a problem setting the sim object from the Settings Object\n");
 			continue;
 		}
+		sim_halos.setFilePath(filepath);
+
+		if (first) {
+			first_time_slice = sim_halos.getTimeSlice();
+			first = false;
+		} else {
+			if (sim_halos.getTimeSlice() != first_time_slice) {
+				printf("A simulation from (%s) was passed with a time slice different from the first.\n", sim_halos.getFilePath().c_str());
+				return -2;
+			}
+		}
+
 		printf("Found sim with %lu halos.\n", sim_halos.size());
-		SimGroup.push_back(sim_halos);
+		auto it = SimMap.find(sim_halos.getSimNum());
+		if(it != SimMap.end()) {
+			printf("There was already a sim in place!\n");
+			return -4;
+		}
+		SimMap[sim_halos.getSimNum()] = sim_halos;
 	}
+	printf("Found %lu sims from time slice %s\n", SimMap.size(), first_time_slice.c_str());
+
+	//Sim_num, Halo_id, sim_num -> halo_id
+	typedef std::map<int, int> sim_halo_id_map;
+	typedef std::map<int, sim_halo_id_map> halo_nearest_map;
+	typedef std::map<int, halo_nearest_map> halo_mappings;
+	halo_mappings nearest_neighbor_maps;
+	//Initialize halo mappings
+	for(auto sim_map_i = SimMap.begin(); sim_map_i != SimMap.end(); ++sim_map_i) {
+		nearest_neighbor_maps[sim_map_i->first] = halo_nearest_map();
+		halo_nearest_map& current_halo_neighbor_map = nearest_neighbor_maps[sim_map_i->first];
+		std::map<int, Halo>& sim_halos = sim_map_i->second.getHalos();
+		for(auto halo_id_i = sim_halos.begin(); halo_id_i != sim_halos.end(); ++halo_id_i) {
+			current_halo_neighbor_map[halo_id_i->first] = sim_halo_id_map();
+			sim_halo_id_map& current_map = current_halo_neighbor_map[halo_id_i->first];
+			for (auto sim_map_j = SimMap.begin(); sim_map_j != SimMap.end(); ++sim_map_j) {
+				if (sim_map_i->first == sim_map_j->first) {
+					continue;
+				}
+				current_map[sim_map_j->first] = -1;
+			}
+		}
+	}
+
+	int num_pairs = 0;
+	//Find Superhalos
+	UniquePairManager<int, SimHalos> unique_pair_manager(SimMap);
+	while(not unique_pair_manager.is_finished()) {
+		++num_pairs;
+		printf("Looking at sim pair (%i[%i]) (%i[%i])\n", unique_pair_manager.getLowNum(), unique_pair_manager.getLowNumIdx(), unique_pair_manager.getHighNum(), unique_pair_manager.getHighNumIdx());
+		unique_pair_manager.advance();
+	}
+	printf("There were %i pairs out of %i pairs\n", num_pairs, unique_pair_manager.size());
 
 	return 0;
 }
