@@ -361,6 +361,28 @@ void UniquePairManager<S,T>::advance() {
 }
 
 typedef std::map<int, int> superhalo;
+class Superhalo {
+	public:
+		Superhalo() {};
+		superhalo& getSuperhalo() {
+			return this->the_superhalo;
+		}
+		const superhalo& getConstSuperhalo() const {
+			return this->the_superhalo;
+		}
+		double getMeanMass(const std::map<int, SimHalos> SimMap) const;
+	private:
+		superhalo the_superhalo;
+};
+
+double Superhalo::getMeanMass(const std::map<int, SimHalos> SimMap) const {
+	double total_mass = 0.;
+	for(auto content_it = this->the_superhalo.begin(); content_it != this->the_superhalo.end(); ++content_it) {
+		const Halo& halo = SimMap.at(content_it->first).getConstHalos().at(content_it->second);
+		total_mass += halo.getParticleMass();
+	}
+	return total_mass/((double)this->the_superhalo.size());
+}
 
 class SuperhaloContainer {
 	public:
@@ -371,13 +393,13 @@ class SuperhaloContainer {
 		void setTimeSlice(const std::string& time_slice) {
 			this->time_slice = time_slice;
 		}
-		std::vector<superhalo>& getSuperhalos() {
+		std::vector<Superhalo>& getSuperhalos() {
 			return this->superhalos;
 		}
 		void setConfigObject(libconfig::Config& config_obj);
 
 	private:
-		std::vector<superhalo> superhalos;
+		std::vector<Superhalo> superhalos;
 		std::string time_slice;
 };
 
@@ -393,8 +415,8 @@ void SuperhaloContainer::setConfigObject(libconfig::Config& config_obj) {
 	libconfig::Setting& superhalo_list = root_group.lookup("superhalos");
 	for(size_t superhalo_i = 0; superhalo_i < superhalos.size(); ++superhalo_i) {
 		libconfig::Setting& superhalo_contents = superhalo_list.add(libconfig::Setting::TypeList);
-		superhalo& superhalo_content = superhalos[superhalo_i];
-		for(auto superhalo_content_i = superhalo_content.begin(); superhalo_content_i != superhalo_content.end(); ++superhalo_content_i) {
+		Superhalo& superhalo_content = superhalos[superhalo_i];
+		for(auto superhalo_content_i = superhalo_content.getSuperhalo().begin(); superhalo_content_i != superhalo_content.getSuperhalo().end(); ++superhalo_content_i) {
 			libconfig::Setting& halo_member_setting = superhalo_contents.add(libconfig::Setting::TypeGroup);
 			libconfig::Setting& sim_num_setting = halo_member_setting.add("sim_num", libconfig::Setting::TypeInt);
 			sim_num_setting = superhalo_content_i->first;
@@ -542,25 +564,25 @@ int main(int argc, char** argv) {
 	superhalos.setTimeSlice(SimMap[first_sim_num].getTimeSlice());
 	for(auto halo_id_it = nearest_neighbor_maps[first_sim_num].begin(); halo_id_it != nearest_neighbor_maps[first_sim_num].end(); ++halo_id_it) {
 		int first_halo_id = halo_id_it->first;
-		superhalo superhalo_candidate;
-		superhalo_candidate[first_sim_num] = first_halo_id;
+		Superhalo superhalo_candidate;
+		superhalo_candidate.getSuperhalo()[first_sim_num] = first_halo_id;
 		for(auto second_sim_it = nearest_neighbor_maps[first_sim_num][first_halo_id].begin(); second_sim_it != nearest_neighbor_maps[first_sim_num][first_halo_id].end(); ++second_sim_it) {
 			int second_sim_num = second_sim_it->first;
 			int second_halo_id = nearest_neighbor_maps[first_sim_num][first_halo_id][second_sim_num];
 			if(nearest_neighbor_maps[second_sim_num][second_halo_id][first_sim_num] == first_halo_id) {
-				superhalo_candidate[second_sim_num] = second_halo_id;
+				superhalo_candidate.getSuperhalo()[second_sim_num] = second_halo_id;
 			}
 		}
-		if (superhalo_candidate.size() > 1) {
+		if (superhalo_candidate.getSuperhalo().size() > 1) {
 			superhalos.getSuperhalos().push_back(superhalo_candidate);
 		}
 	}
 
-	auto superhalo_sort_func = [SimMap](const superhalo& a, const superhalo& b) {
-		if(a.size() > b.size()) {
+	auto superhalo_sort_func = [SimMap](const Superhalo& a, const Superhalo& b) {
+		if(a.getConstSuperhalo().size() > b.getConstSuperhalo().size()) {
 			return true;
 		} else {
-			if(SimMap.at(a.begin()->first).getConstHalos().at(a.begin()->second).getParticleMass() > SimMap.at(b.begin()->first).getConstHalos().at(b.begin()->second).getParticleMass()) {
+			if(a.getMeanMass(SimMap) > b.getMeanMass(SimMap)) {
 				return true;
 			} else {
 				return false;
