@@ -475,6 +475,18 @@ int main(int argc, char** argv) {
 		unique_pair_manager.advance();
 	}
 
+	// Check that all values were set
+	for(auto prime_sim_it = nearest_neighbor_maps.begin(); prime_sim_it != nearest_neighbor_maps.end(); ++prime_sim_it) {
+		halo_nearest_map& nearest_map = prime_sim_it->second;
+		for(auto nearest_map_it = nearest_map.begin(); nearest_map_it != nearest_map.end(); ++nearest_map_it) {
+			sim_halo_id_map& id_map = nearest_map_it->second;
+			for(auto id_map_it = id_map.begin(); id_map_it != id_map.end(); ++id_map_it) {
+				if(id_map_it->second == -1) {
+					printf("We didn't set a value!!\n");
+				}
+			}
+		}
+	}
 
 	return 0;
 }
