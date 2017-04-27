@@ -488,5 +488,25 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	//Find superhalos from first sim
+	int first_sim_num = nearest_neighbor_maps.begin()->first;
+	typedef std::map<int, int> superhalo;
+	std::vector<superhalo> superhalos;
+	for(auto halo_id_it = nearest_neighbor_maps[first_sim_num].begin(); halo_id_it != nearest_neighbor_maps[first_sim_num].end(); ++halo_id_it) {
+		int first_halo_id = halo_id_it->first;
+		superhalo superhalo_candidate;
+		superhalo_candidate[first_sim_num] = first_halo_id;
+		for(auto second_sim_it = nearest_neighbor_maps[first_sim_num][first_halo_id].begin(); second_sim_it != nearest_neighbor_maps[first_sim_num][first_halo_id].end(); ++second_sim_it) {
+			int second_sim_num = second_sim_it->first;
+			int second_halo_id = nearest_neighbor_maps[first_sim_num][first_halo_id][second_sim_num];
+			if(nearest_neighbor_maps[second_sim_num][second_halo_id][first_sim_num] == first_halo_id) {
+				superhalo_candidate[second_sim_num] = second_halo_id;
+			}
+		}
+		if (superhalo_candidate.size() > 1) {
+			superhalos.push_back(superhalo_candidate);
+		}
+	}
+
 	return 0;
 }
