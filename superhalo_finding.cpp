@@ -356,6 +356,50 @@ void UniquePairManager<S,T>::advance() {
 	return;
 }
 
+typedef std::map<int, int> superhalo;
+
+class SuperhaloContainer {
+	public:
+		SuperhaloContainer();
+		const std::string& getTimeSlice() const {
+			return this->time_slice;
+		}
+		void setTimeSlice(const std::string& time_slice) {
+			this->time_slice = time_slice;
+		}
+		std::vector<superhalo>& getSuperhalos() {
+			return this->superhalos;
+		}
+		void setConfigObject(libconfig::Config& config_obj);
+
+	private:
+		std::vector<superhalo> superhalos;
+		std::string time_slice;
+};
+
+SuperhaloContainer::SuperhaloContainer() {
+	time_slice = "";
+}
+
+void SuperhaloContainer::setConfigObject(libconfig::Config& config_obj) {
+	libconfig::Setting& root_group = config_obj.getRoot();
+	root_group.add("time_slice", libconfig::Setting::TypeString);
+	root_group.lookup("time_slice") = this->time_slice.c_str();
+	root_group.add("superhalos", libconfig::Setting::TypeList);
+	libconfig::Setting& superhalo_list = root_group.lookup("superhalos");
+	for(size_t superhalo_i = 0; superhalo_i < superhalos.size(); ++superhalo_i) {
+		libconfig::Setting& superhalo_contents = superhalo_list.add(libconfig::Setting::TypeList);
+		superhalo& superhalo_content = superhalos[superhalo_i];
+		for(auto superhalo_content_i = superhalo_content.begin(); superhalo_content_i != superhalo_content.end(); ++superhalo_content_i) {
+			libconfig::Setting& halo_member_setting = superhalo_contents.add(libconfig::Setting::TypeGroup);
+			libconfig::Setting& sim_num_setting = halo_member_setting.add("sim_num", libconfig::Setting::TypeInt);
+			sim_num_setting = superhalo_content_i->first;
+			libconfig::Setting& halo_setting = halo_member_setting.add("halo", libconfig::Setting::TypeInt);
+			halo_setting = superhalo_content_i->second;
+		}
+	}
+}
+
 int main(int argc, char** argv) {
 	std::vector<std::string> sim_halo_data_filepaths;
 	std::string output_filepath;
@@ -490,8 +534,8 @@ int main(int argc, char** argv) {
 
 	//Find superhalos from first sim
 	int first_sim_num = nearest_neighbor_maps.begin()->first;
-	typedef std::map<int, int> superhalo;
-	std::vector<superhalo> superhalos;
+	SuperhaloContainer superhalos;
+	superhalos.setTimeSlice(SimMap[first_sim_num].getTimeSlice());
 	for(auto halo_id_it = nearest_neighbor_maps[first_sim_num].begin(); halo_id_it != nearest_neighbor_maps[first_sim_num].end(); ++halo_id_it) {
 		int first_halo_id = halo_id_it->first;
 		superhalo superhalo_candidate;
@@ -504,9 +548,22 @@ int main(int argc, char** argv) {
 			}
 		}
 		if (superhalo_candidate.size() > 1) {
-			superhalos.push_back(superhalo_candidate);
+			superhalos.getSuperhalos().push_back(superhalo_candidate);
 		}
 	}
+
+	FILE* output_file = fopen(output_filepath.c_str(), "w");
+	if(output_file == 0) {
+		printf("There was a problem opening the output file\n");
+		return -4;
+	}
+
+	libconfig::Config superhalo_config;
+	superhalos.setConfigObject(superhalo_config);
+
+	superhalo_config.write(output_file);
+
+	fclose(output_file);
 
 	return 0;
 }
