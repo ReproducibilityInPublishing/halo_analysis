@@ -11,6 +11,41 @@
 
 #include "libconfig.h++"
 
+//Statistical operation code
+
+template<class T> T Moment(const std::vector<T>& vec, const int N) {
+	T total = 0.;
+	for(size_t vec_i = 0; vec_i < vec.size(); ++vec_i) {
+		total += pow(vec[vec_i], N);
+	}
+	return total/((T)vec.size());
+}
+
+template<class T> T Mean(const std::vector<T>& vec) {
+	return Moment(vec, 1);
+}
+
+template<class T> T CentralMoment(const std::vector<T>& vec, const int N) {
+	T total = 0.;
+	T mean = Mean(vec);
+	for(size_t vec_i = 0; vec_i < vec.size(); ++vec_i) {
+		total += pow(vec[vec_i]-mean, N);
+	}
+	return total/((T)vec.size());
+}
+
+template<class T> T Variance(const std::vector<T>& vec) {
+	return Moment(vec, 2)-pow(Moment(vec, 1), 2);
+}
+
+template<class T> T VarianceOfVariance(const std::vector<T>& vec) {
+	T fourth_mom = CentralMoment(vec, 4);
+	T sigma_pow_four = pow(Variance(vec), 2);
+	return (fourth_mom/((T)vec.size())) - ((sigma_pow_four*(vec.size()-3))/(vec.size()*(vec.size()-1)));
+}
+
+//Code to manage config files
+
 int ReadHaloConfigFile(const std::string& filepath, libconfig::Config& config) {
 	printf("Opening file (%s)\n", filepath.c_str());
 	FILE* config_file = fopen(filepath.c_str(), "r");
@@ -39,11 +74,15 @@ int CheckSpecialValueExists(const libconfig::Setting& setting, const std::string
 		printf("The setting (%s) doesn't have a value!!\n", name.c_str());
 		return -1;
 	}
+	if (!setting[name.c_str()].exists("unit")) {
+		printf("The setting (%s) doesn't have a unit!!\n", name.c_str());
+		return -1;
+	}
 	return 0;
 }
 
 template<class T>
-int GetSpecialNamedValue(const libconfig::Setting& setting, const std::string& name, T& value) {
+int GetSpecialNamedValueValue(const libconfig::Setting& setting, const std::string& name, T& value) {
 	if(CheckSpecialValueExists(setting, name) < 0) {
 		return -1;
 	}
@@ -57,7 +96,7 @@ int GetSpecialNamedValue(const libconfig::Setting& setting, const std::string& n
 }
 
 template<>
-int GetSpecialNamedValue(const libconfig::Setting& setting, const std::string& name, std::string& value) {
+int GetSpecialNamedValueValue(const libconfig::Setting& setting, const std::string& name, std::string& value) {
 	if(CheckSpecialValueExists(setting, name) < 0) {
 		return -1;
 	}
@@ -68,6 +107,32 @@ int GetSpecialNamedValue(const libconfig::Setting& setting, const std::string& n
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
+}
+
+int GetSpecialNamedValueUnit(const libconfig::Setting& setting, const std::string& name, std::string& unit) {
+	if(CheckSpecialValueExists(setting, name) < 0) {
+		return -1;
+	}
+	try {
+		unit = setting[name.c_str()].lookup("unit").c_str();
+		return 0;
+	} catch (libconfig::SettingTypeException e) {
+		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
+		return -2;
+	}
+}
+
+template<class T> int GetSpecialNamedValue(const libconfig::Setting& setting, const std::string& name, T& value, std::string& unit) {
+	if(CheckSpecialValueExists(setting, name) < 0) {
+		return -1;
+	}
+	if(GetSpecialNamedValueValue(setting, name, value) < 0) {
+		return -2;
+	}
+	if(GetSpecialNamedValueUnit(setting, name, unit) < 0) {
+		return -3;
+	}
+	return 0;
 }
 
 int CheckValueExists(const libconfig::Setting& setting, const std::string& name) {
@@ -106,6 +171,26 @@ int GetNamedValue(const libconfig::Setting& setting, const std::string& name, st
 	}
 }
 
+int WriteDoubleSpecialValue(libconfig::Setting& setting, const std::string& name, double value, const std::string& unit) {
+	try {
+		libconfig::Setting& new_val_setting = setting.add(name, libconfig::Setting::TypeGroup);
+		new_val_setting.add("value", libconfig::Setting::TypeFloat) = value;
+		new_val_setting.add("unit", libconfig::Setting::TypeString) = unit.c_str();
+		return 0;
+	} catch (libconfig::SettingTypeException e) {
+		printf("SettingTypeException encountered for (%s)\n", e.getPath());
+		return -1;
+	} catch (libconfig::SettingNameException e) {
+		printf("SettingNameException encountered for (%s)\n", e.getPath());
+		return -2;
+	} catch (...) {
+		printf("Encountered unexpected exception!!\n");
+		return -3;
+	}
+}
+
+//Halo Management code
+
 class Halo {
 	public:
 		Halo();
@@ -115,11 +200,23 @@ class Halo {
 		void setParticleIdentifier(int id) {
 			this->particle_identifier = id;
 		}
+		const std::string& getParticleIdentifierUnit() const {
+			return this->particle_identifier_unit;
+		}
+		void setParticleIdentifierUnit(const std::string& unit) {
+			this->particle_identifier_unit = unit;
+		}
 		double getParticleMass() const {
 			return this->particle_mass;
 		}
 		void setParticleMass(double mass) {
 			this->particle_mass = mass;
+		}
+		const std::string& getParticleMassUnit() const {
+			return this->particle_mass_unit;
+		}
+		void setParticleMassUnit(const std::string& unit) {
+			this->particle_mass_unit = unit;
 		}
 		double getVirialRadius() const {
 			return this->virial_radius;
@@ -127,11 +224,23 @@ class Halo {
 		void setVirialRadius(double radius) {
 			this->virial_radius = radius;
 		}
+		const std::string& getVirialRadiusUnit() const {
+			return this->virial_radius_unit;
+		}
+		void setVirialRadiusUnit(const std::string& unit) {
+			this->virial_radius_unit = unit;
+		}
 		double getOrigParticlePosition(int i) const {
 			return this->orig_particle_position[i];
 		}
 		void setOrigParticlePosition(int i, double value) {
 			this->orig_particle_position[i] = value;
+		}
+		const std::string& getOrigParticlePositionUnit() {
+			return this->position_unit;
+		}
+		void setOrigParticlePositionUnit(const std::string& unit) {
+			this->position_unit = unit;
 		}
 		void Print() const {
 			printf("Particle (%i) Mass (%.3e) Virial Radius (%.3e) Orig Position (%.3e,%.3e,%.3e)\n", this->particle_identifier, this->particle_mass, this->virial_radius, this->orig_particle_position[0], this->orig_particle_position[1], this->orig_particle_position[2]);
@@ -139,9 +248,13 @@ class Halo {
 		int setFromSetting(const libconfig::Setting& halo_setting);
 	private:
 		int particle_identifier;
+		std::string particle_identifier_unit;
 		double particle_mass;
+		std::string particle_mass_unit;
 		double virial_radius;
+		std::string virial_radius_unit;
 		double orig_particle_position[3];
+		std::string position_unit;
 };
 
 Halo::Halo() {
@@ -154,36 +267,46 @@ Halo::Halo() {
 
 int Halo::setFromSetting(const libconfig::Setting& halo_setting) {
 	int identifier;
-	if(GetSpecialNamedValue(halo_setting, "particle_identifier", identifier) < 0) {
+	std::string identifier_unit;
+	if(GetSpecialNamedValue(halo_setting, "particle_identifier", identifier, identifier_unit) < 0) {
 		return -1;
 	}
 	double particle_mass;
-	if(GetSpecialNamedValue(halo_setting, "particle_mass", particle_mass) < 0) {
+	std::string particle_mass_unit;
+	if(GetSpecialNamedValue(halo_setting, "particle_mass", particle_mass, particle_mass_unit) < 0) {
 		return -1;
 	}
 	double virial_radius;
-	if(GetSpecialNamedValue(halo_setting, "virial_radius", virial_radius) < 0) {
+	std::string virial_radius_unit;
+	if(GetSpecialNamedValue(halo_setting, "virial_radius", virial_radius, virial_radius_unit) < 0) {
 		return -1;
 	}
 	double orig_pos_x;
-	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_x", orig_pos_x) < 0) {
+	std::string orig_pos_x_unit;
+	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_x", orig_pos_x, orig_pos_x_unit) < 0) {
 		return -1;
 	}
 	double orig_pos_y;
-	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_y", orig_pos_y) < 0) {
+	std::string orig_pos_y_unit;
+	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_y", orig_pos_y, orig_pos_y_unit) < 0) {
 		return -1;
 	}
 	double orig_pos_z;
-	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_z", orig_pos_z) < 0) {
+	std::string orig_pos_z_unit;
+	if(GetSpecialNamedValue(halo_setting, "orig_particle_position_z", orig_pos_z, orig_pos_z_unit) < 0) {
 		return -1;
 	}
 
 	this->setParticleIdentifier(identifier);
+	this->setParticleIdentifierUnit(identifier_unit);
 	this->setParticleMass(particle_mass);
+	this->setParticleMassUnit(particle_mass_unit);
 	this->setVirialRadius(virial_radius);
+	this->setVirialRadiusUnit(virial_radius_unit);
 	this->setOrigParticlePosition(0, orig_pos_x);
 	this->setOrigParticlePosition(1, orig_pos_y);
 	this->setOrigParticlePosition(2, orig_pos_z);
+	this->setOrigParticlePositionUnit(orig_pos_x_unit);
 	return 0;
 }
 
@@ -370,18 +493,74 @@ class Superhalo {
 		const superhalo& getConstSuperhalo() const {
 			return this->the_superhalo;
 		}
-		double getMeanMass(const std::map<int, SimHalos> SimMap) const;
+		void calculateSuperhaloProperties(const std::map<int, SimHalos>& SimMap);
+		std::vector<double> getMassVec(const std::map<int, SimHalos>& SimMap) const;
+		double getMassMean() const {
+			return this->mass_mean;
+		}
+		double getMassRootVariance() const {
+			return this->mass_root_variance;
+		}
+		double getMassFourthRootVarianceOfVariance() const {
+			return this->mass_fourth_root_variance_of_variance;
+		}
+		const std::string& getMassUnit() const {
+			return this->mass_unit;
+		}
+		std::vector<double> getRadiusVec(const std::map<int, SimHalos>& SimMap) const;
+		double getRadiusMean() const {
+			return this->radius_mean;
+		}
+		double getRadiusRootVariance() const {
+			return this->radius_root_variance;
+		}
+		double getRadiusFourthRootVarianceOfVariance() const {
+			return this->radius_fourth_root_variance_of_variance;
+		}
+		const std::string& getRadiusUnit() const {
+			return this->radius_unit;
+		}
 	private:
 		superhalo the_superhalo;
+		double mass_mean;
+		double mass_root_variance;
+		double mass_fourth_root_variance_of_variance;
+		std::string mass_unit;
+		double radius_mean;
+		double radius_root_variance;
+		double radius_fourth_root_variance_of_variance;
+		std::string radius_unit;
 };
 
-double Superhalo::getMeanMass(const std::map<int, SimHalos> SimMap) const {
-	double total_mass = 0.;
+std::vector<double> Superhalo::getMassVec(const std::map<int, SimHalos>& SimMap) const {
+	std::vector<double> mass_vec;
 	for(auto content_it = this->the_superhalo.begin(); content_it != this->the_superhalo.end(); ++content_it) {
 		const Halo& halo = SimMap.at(content_it->first).getConstHalos().at(content_it->second);
-		total_mass += halo.getParticleMass();
+		mass_vec.push_back(halo.getParticleMass());
 	}
-	return total_mass/((double)this->the_superhalo.size());
+	return mass_vec;
+}
+
+std::vector<double> Superhalo::getRadiusVec(const std::map<int, SimHalos>& SimMap) const {
+	std::vector<double> radius_vec;
+	for(auto content_it = this->the_superhalo.begin(); content_it != this->the_superhalo.end(); ++content_it) {
+		const Halo& halo = SimMap.at(content_it->first).getConstHalos().at(content_it->second);
+		radius_vec.push_back(halo.getVirialRadius());
+	}
+	return radius_vec;
+}
+
+void Superhalo::calculateSuperhaloProperties(const std::map<int, SimHalos>& SimMap) {
+	std::vector<double> mass_vec = this->getMassVec(SimMap);
+	this->mass_mean = Mean(mass_vec);
+	this->mass_root_variance = std::pow(Variance(mass_vec), 0.5);
+	this->mass_fourth_root_variance_of_variance = std::pow(VarianceOfVariance(mass_vec), 0.25);
+	this->mass_unit = SimMap.begin()->second.getConstHalos().begin()->second.getParticleMassUnit();
+	std::vector<double> radius_vec = this->getRadiusVec(SimMap);
+	this->radius_mean = Mean(radius_vec);
+	this->radius_root_variance = std::pow(Variance(radius_vec), 0.5);
+	this->radius_fourth_root_variance_of_variance = std::pow(VarianceOfVariance(radius_vec), 0.25);
+	this->radius_unit = SimMap.begin()->second.getConstHalos().begin()->second.getVirialRadiusUnit();
 }
 
 class SuperhaloContainer {
@@ -396,10 +575,15 @@ class SuperhaloContainer {
 		std::vector<Superhalo>& getSuperhalos() {
 			return this->superhalos;
 		}
+		const std::vector<int>& getAllSimNums() {
+			return this->all_sim_nums;
+		}
+		void setAllSimNums(const std::map<int, SimHalos>& SimMap);
 		void setConfigObject(libconfig::Config& config_obj);
 
 	private:
 		std::vector<Superhalo> superhalos;
+		std::vector<int> all_sim_nums;
 		std::string time_slice;
 };
 
@@ -407,15 +591,45 @@ SuperhaloContainer::SuperhaloContainer() {
 	time_slice = "";
 }
 
+void SuperhaloContainer::setAllSimNums(const std::map<int, SimHalos>& SimMap) {
+	for(auto sim_halo_it = SimMap.begin(); sim_halo_it != SimMap.end(); ++sim_halo_it) {
+		this->all_sim_nums.push_back(sim_halo_it->first);
+	}
+}
+
 void SuperhaloContainer::setConfigObject(libconfig::Config& config_obj) {
 	libconfig::Setting& root_group = config_obj.getRoot();
 	root_group.add("time_slice", libconfig::Setting::TypeString);
 	root_group.lookup("time_slice") = this->time_slice.c_str();
+	root_group.add("all_sim_nums", libconfig::Setting::TypeArray);
+	libconfig::Setting& all_sim_nums_array = root_group.lookup("all_sim_nums");
+	for(auto sim_num_it = this->all_sim_nums.begin(); sim_num_it != this->all_sim_nums.end(); ++sim_num_it) {
+		all_sim_nums_array.add(libconfig::Setting::TypeInt) = *sim_num_it;
+	}
 	root_group.add("superhalos", libconfig::Setting::TypeList);
 	libconfig::Setting& superhalo_list = root_group.lookup("superhalos");
 	for(size_t superhalo_i = 0; superhalo_i < superhalos.size(); ++superhalo_i) {
-		libconfig::Setting& superhalo_contents = superhalo_list.add(libconfig::Setting::TypeList);
+		libconfig::Setting& superhalo_group = superhalo_list.add(libconfig::Setting::TypeGroup);
 		Superhalo& superhalo_content = superhalos[superhalo_i];
+		if(WriteDoubleSpecialValue(superhalo_group, "mass_mean", superhalo_content.getMassMean(), superhalo_content.getMassUnit()) < 0) {
+			printf("There was a problem writing the mass mean!\n");
+		}
+		if(WriteDoubleSpecialValue(superhalo_group, "mass_root_variance", superhalo_content.getMassRootVariance(), superhalo_content.getMassUnit()) < 0) {
+			printf("There was a problem writing the mass root variance!\n");
+		}
+		if(WriteDoubleSpecialValue(superhalo_group, "mass_variance_of_variance", superhalo_content.getMassFourthRootVarianceOfVariance(), superhalo_content.getMassUnit()) < 0) {
+			printf("There was a problem writing the mass variance of variance!\n");
+		}
+		if(WriteDoubleSpecialValue(superhalo_group, "radius_mean", superhalo_content.getRadiusMean(), superhalo_content.getRadiusUnit()) < 0) {
+			printf("There was a problem writing the radius mean!\n");
+		}
+		if(WriteDoubleSpecialValue(superhalo_group, "radius_root_variance", superhalo_content.getRadiusRootVariance(), superhalo_content.getRadiusUnit()) < 0) {
+			printf("There was a problem writing the radius root variance!\n");
+		}
+		if(WriteDoubleSpecialValue(superhalo_group, "radius_variance_of_variance", superhalo_content.getRadiusFourthRootVarianceOfVariance(), superhalo_content.getRadiusUnit()) < 0) {
+			printf("There was a problem writing the radius variance of variance!\n");
+		}
+		libconfig::Setting& superhalo_contents = superhalo_group.add("superhalo_content", libconfig::Setting::TypeList);
 		for(auto superhalo_content_i = superhalo_content.getSuperhalo().begin(); superhalo_content_i != superhalo_content.getSuperhalo().end(); ++superhalo_content_i) {
 			libconfig::Setting& halo_member_setting = superhalo_contents.add(libconfig::Setting::TypeGroup);
 			libconfig::Setting& sim_num_setting = halo_member_setting.add("sim_num", libconfig::Setting::TypeInt);
@@ -561,6 +775,7 @@ int main(int argc, char** argv) {
 	//Find superhalos from first sim
 	int first_sim_num = nearest_neighbor_maps.begin()->first;
 	SuperhaloContainer superhalos;
+	superhalos.setAllSimNums(SimMap);
 	superhalos.setTimeSlice(SimMap[first_sim_num].getTimeSlice());
 	for(auto halo_id_it = nearest_neighbor_maps[first_sim_num].begin(); halo_id_it != nearest_neighbor_maps[first_sim_num].end(); ++halo_id_it) {
 		int first_halo_id = halo_id_it->first;
@@ -573,16 +788,21 @@ int main(int argc, char** argv) {
 				superhalo_candidate.getSuperhalo()[second_sim_num] = second_halo_id;
 			}
 		}
-		if (superhalo_candidate.getSuperhalo().size() > 1) {
+		if (superhalo_candidate.getSuperhalo().size() > 3) {
 			superhalos.getSuperhalos().push_back(superhalo_candidate);
 		}
+	}
+
+	//Calculate superhalo quantities
+	for(auto superhalo_it = superhalos.getSuperhalos().begin(); superhalo_it != superhalos.getSuperhalos().end(); ++superhalo_it) {
+		superhalo_it->calculateSuperhaloProperties(SimMap);
 	}
 
 	auto superhalo_sort_func = [SimMap](const Superhalo& a, const Superhalo& b) {
 		if(a.getConstSuperhalo().size() > b.getConstSuperhalo().size()) {
 			return true;
 		} else {
-			if(a.getMeanMass(SimMap) > b.getMeanMass(SimMap)) {
+			if(a.getMassMean() > b.getMassMean()) {
 				return true;
 			} else {
 				return false;
