@@ -428,10 +428,16 @@ class halo_object(object):
         return repr_dict
 
 class halo_superobject(object):
-    def __init__(self, chain, catalog_helpers):
+    def __init__(self, data, catalog_helpers):
+        self.mass_mean = YTQuantity(data['mass_mean']['value'], data['mass_mean']['unit'])
+        self.mass_root_variance = YTQuantity(data['mass_root_variance']['value'], data['mass_root_variance']['unit'])
+        self.mass_fourth_root_variance_of_variance = YTQuantity(data['mass_fourth_root_variance_of_variance']['value'], data['mass_fourth_root_variance_of_variance']['unit'])
+        self.radius_mean = YTQuantity(data['radius_mean']['value'], data['radius_mean']['unit'])
+        self.radius_root_variance = YTQuantity(data['radius_root_variance']['value'], data['radius_root_variance']['unit'])
+        self.radius_fourth_root_variance_of_variance = YTQuantity(data['radius_fourth_root_variance_of_variance']['value'], data['radius_fourth_root_variance_of_variance']['unit'])
         self.halos = []
-        for item in chain:
-            self.halos.append(catalog_helpers[item[0]][item[1]])
+        for halo_data in data['superhalo_content']:
+            self.halos.append(catalog_helpers[halo_data['sim_num']][halo_data['halo']])
 
     def get_data_for_field(self, field):
         data_manager = yt_array_manager()

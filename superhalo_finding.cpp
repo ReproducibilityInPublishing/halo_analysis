@@ -617,7 +617,7 @@ void SuperhaloContainer::setConfigObject(libconfig::Config& config_obj) {
 		if(WriteDoubleSpecialValue(superhalo_group, "mass_root_variance", superhalo_content.getMassRootVariance(), superhalo_content.getMassUnit()) < 0) {
 			printf("There was a problem writing the mass root variance!\n");
 		}
-		if(WriteDoubleSpecialValue(superhalo_group, "mass_variance_of_variance", superhalo_content.getMassFourthRootVarianceOfVariance(), superhalo_content.getMassUnit()) < 0) {
+		if(WriteDoubleSpecialValue(superhalo_group, "mass_fourth_root_variance_of_variance", superhalo_content.getMassFourthRootVarianceOfVariance(), superhalo_content.getMassUnit()) < 0) {
 			printf("There was a problem writing the mass variance of variance!\n");
 		}
 		if(WriteDoubleSpecialValue(superhalo_group, "radius_mean", superhalo_content.getRadiusMean(), superhalo_content.getRadiusUnit()) < 0) {
@@ -626,7 +626,7 @@ void SuperhaloContainer::setConfigObject(libconfig::Config& config_obj) {
 		if(WriteDoubleSpecialValue(superhalo_group, "radius_root_variance", superhalo_content.getRadiusRootVariance(), superhalo_content.getRadiusUnit()) < 0) {
 			printf("There was a problem writing the radius root variance!\n");
 		}
-		if(WriteDoubleSpecialValue(superhalo_group, "radius_variance_of_variance", superhalo_content.getRadiusFourthRootVarianceOfVariance(), superhalo_content.getRadiusUnit()) < 0) {
+		if(WriteDoubleSpecialValue(superhalo_group, "radius_fourth_root_variance_of_variance", superhalo_content.getRadiusFourthRootVarianceOfVariance(), superhalo_content.getRadiusUnit()) < 0) {
 			printf("There was a problem writing the radius variance of variance!\n");
 		}
 		libconfig::Setting& superhalo_contents = superhalo_group.add("superhalo_content", libconfig::Setting::TypeList);
@@ -689,6 +689,10 @@ int main(int argc, char** argv) {
 			return -4;
 		}
 		SimMap[sim_halos.getSimNum()] = sim_halos;
+	}
+	if (SimMap.size() == 0) {
+		printf("Didn't find any sims!!\n");
+		return -1;
 	}
 	printf("Found %lu sims from time slice %s\n", SimMap.size(), first_time_slice.c_str());
 

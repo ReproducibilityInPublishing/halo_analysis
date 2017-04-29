@@ -10,7 +10,7 @@ from halo_analysis_tools import *
 import argparse
 import sys
 import os
-import ConfigParser
+import libconf
 import json
 
 import matplotlib.pyplot as plt
@@ -25,14 +25,14 @@ base_path_man = path_manager(args.root_data_dir, args.root_output_dir,
 base_path_man.ensure_directories()
 
 
-config = ConfigParser.ConfigParser()
-config.read(base_path_man.get_superhalo_config_file())
+with open(base_path_man.get_superhalo_config_file(), 'r') as config_file:
+    config = libconf.loads(config_file.read().decode('utf8'))
 
 catalog_helpers = {}
 
-sim_numbers = json.loads(config.get('superhalo_data', 'sim_numbers'))
+sim_numbers = config['all_sim_nums']
 
-superhalo_chains = json.loads(config.get('superhalo_data', 'superhalos'))
+superhalo_data = config['superhalos']
 
 num_halos = []
 job_time = []
@@ -40,7 +40,7 @@ job_time = []
 for sim_num in sim_numbers:
     path_man = path_manager(args.root_data_dir, args.root_output_dir, 
                             sim_num=("%i" % sim_num),
-                            snap_name=config.get('superhalo_data', 'time_slice'),
+                            snap_name=config['time_slice'],
                             data_dir_prefix=args.data_prefix)
 
     if not dataset_finished(path_man.get_exp_path()):
@@ -53,6 +53,7 @@ for sim_num in sim_numbers:
     num_halos.append(len(catalog_helpers[sim_num]))
     job_time.append(get_run_time_from_dataset(path_man.get_exp_path()))
 
+print(len(superhalo_data))
 
 num_halos = np.array(num_halos)
 plt.hist(num_halos)
@@ -70,8 +71,8 @@ plt.close()
     
 superhalos = []
 
-for chain in superhalo_chains:
-    superhalos.append(halo_superobject(chain, catalog_helpers))
+for data in superhalo_data:
+    superhalos.append(halo_superobject(data, catalog_helpers))
 
 for i in range(len(superhalos)):
     print("Producing plots for superhalo %i" % i)
@@ -130,10 +131,16 @@ for i in range(len(superhalos)):
     plt.xlabel("Mass [%s]" % masses.array.units)
     plt.savefig("%s/mass.png" % superhalo_dir)
     plt.close()
-    halostats.write("Mean Mass: %f %s\n" % (masses.mean(), masses.mean().units))
-    halo_var = masses.var()
-    halostats.write("Mass Var: %f %s\n" % (np.sqrt(np.array(masses.var())), masses.var().units**0.5))
-    halostats.write("Mass Var is %f%% of Mean\n" % (100.*(np.sqrt(np.array(masses.var()))/np.array(masses.mean()))))
+    halostats.write("--Pre Calculated--\n")
+    halostats.write("Mass Mean: %.5e %s\n" % (float(superhalo.mass_mean), superhalo.mass_mean.units))
+    halostats.write("Mass Root Var: %.5e %s\n" % (float(superhalo.mass_root_variance), superhalo.mass_root_variance.units))
+    halostats.write("Mass Root Var is %f%% of Mean\n" % (100.*(float(superhalo.mass_root_variance)/float(superhalo.mass_mean))))
+    halostats.write("Mass Fourth Root Var of Var: %.5e %s\n" % (float(superhalo.mass_fourth_root_variance_of_variance), superhalo.mass_fourth_root_variance_of_variance.units))
+    halostats.write("Mass Fourth Root Var of Var is %f%% of Root Var\n" % (100.*float(superhalo.mass_fourth_root_variance_of_variance)/float(superhalo.mass_root_variance)))
+    halostats.write("--Currently Calculated--\n")
+    halostats.write("Mean Mass: %.5e %s\n" % (masses.mean(), masses.mean().units))
+    halostats.write("Mass Root Var: %.5e %s\n" % (np.sqrt(np.array(masses.var())), masses.var().units**0.5))
+    halostats.write("Mass Root Var is %f%% of Mean\n" % (100.*(np.sqrt(np.array(masses.var()))/np.array(masses.mean()))))
     halostats.write("\n")
     
     virial_radius = superhalo.get_data_for_field('virial_radius')
@@ -142,8 +149,15 @@ for i in range(len(superhalos)):
     plt.xlabel("Virial Radius [%s]" % virial_radius.array.units)
     plt.savefig("%s/v_rad.png" % superhalo_dir)
     plt.close()
-    halostats.write("Mean Virial Radius: %f %s\n" % (virial_radius.mean(), virial_radius.mean().units))
-    halostats.write("Virial Radius Var: %f %s\n" % (np.sqrt(np.array(virial_radius.var())), virial_radius.var().units**0.5))
+    halostats.write("--Pre Calculated--\n")
+    halostats.write("Virial Radius Mean: %.5e %s\n" % (float(superhalo.radius_mean), superhalo.radius_mean.units))
+    halostats.write("Virial Radius Root Var: %.5e %s\n" % (float(superhalo.radius_root_variance), superhalo.radius_root_variance.units))
+    halostats.write("Virial Radius Root Var is %f%% of Mean\n" % (100.*(float(superhalo.radius_root_variance)/float(superhalo.radius_mean))))
+    halostats.write("Virial Radius Fourth Root Var of Var: %.5e %s\n" % (float(superhalo.radius_fourth_root_variance_of_variance), superhalo.radius_fourth_root_variance_of_variance.units))
+    halostats.write("Virial Radius Fourth Root Var of Var is %f%% of Root Var\n" % (100.*float(superhalo.radius_fourth_root_variance_of_variance)/float(superhalo.radius_root_variance)))
+    halostats.write("--Currently Calculated--\n")
+    halostats.write("Mean Virial Radius: %.5e %s\n" % (virial_radius.mean(), virial_radius.mean().units))
+    halostats.write("Virial Radius Var: %.5e %s\n" % (np.sqrt(np.array(virial_radius.var())), virial_radius.var().units**0.5))
     halostats.write("Virial Radius Var is %f%% of Mean\n" % (100.*(np.sqrt(np.array(virial_radius.var()))/np.array(virial_radius.mean()))))
     halostats.write("\n")
     
