@@ -494,6 +494,7 @@ class Superhalo {
 			return this->the_superhalo;
 		}
 		void calculateSuperhaloProperties(const std::map<int, SimHalos>& SimMap);
+		bool areValuesFinite() const;
 		std::vector<double> getMassVec(const std::map<int, SimHalos>& SimMap) const;
 		double getMassMean() const {
 			return this->mass_mean;
@@ -561,6 +562,28 @@ void Superhalo::calculateSuperhaloProperties(const std::map<int, SimHalos>& SimM
 	this->radius_root_variance = std::pow(Variance(radius_vec), 0.5);
 	this->radius_fourth_root_variance_of_variance = std::pow(VarianceOfVariance(radius_vec), 0.25);
 	this->radius_unit = SimMap.begin()->second.getConstHalos().begin()->second.getVirialRadiusUnit();
+}
+
+bool Superhalo::areValuesFinite() const {
+	if(!std::isfinite(this->mass_mean)) {
+		return false;
+	}
+	if(!std::isfinite(this->mass_root_variance)) {
+		return false;
+	}
+	if(!std::isfinite(this->mass_fourth_root_variance_of_variance)) {
+		return false;
+	}
+	if(!std::isfinite(this->radius_mean)) {
+		return false;
+	}
+	if(!std::isfinite(this->radius_root_variance)) {
+		return false;
+	}
+	if(!std::isfinite(this->radius_fourth_root_variance_of_variance)) {
+		return false;
+	}
+	return true;
 }
 
 class SuperhaloContainer {
@@ -798,8 +821,15 @@ int main(int argc, char** argv) {
 	}
 
 	//Calculate superhalo quantities
-	for(auto superhalo_it = superhalos.getSuperhalos().begin(); superhalo_it != superhalos.getSuperhalos().end(); ++superhalo_it) {
+	for(auto superhalo_it = superhalos.getSuperhalos().begin(); superhalo_it != superhalos.getSuperhalos().end();) {
 		superhalo_it->calculateSuperhaloProperties(SimMap);
+		// Test if quantities are normal numbers
+		if(superhalo_it->areValuesFinite()) {
+			printf("Removing a superhalo since it contains non-finite properties!!\n");
+			++superhalo_it;
+		} else {
+			superhalo_it = superhalos.getSuperhalos().erase(superhalo_it);
+		}
 	}
 
 	auto superhalo_sort_func = [SimMap](const Superhalo& a, const Superhalo& b) {
