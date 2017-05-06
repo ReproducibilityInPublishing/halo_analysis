@@ -28,7 +28,7 @@ path_man = path_manager(args.root_data_dir, args.root_output_dir,
                         data_dir_prefix=args.data_prefix)
 
 if not dataset_finished(path_man.get_exp_path()):
-    print("Sim number %s is not yet finished. Skipping." % args.sim_number)
+    print("Sim number %s is not yet finished. Exp path was (%s) Skipping." % (args.sim_number, path_man.get_exp_path()))
     sys.exit(0)
 
 if yt.is_root():

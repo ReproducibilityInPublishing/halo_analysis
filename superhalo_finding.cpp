@@ -822,10 +822,14 @@ int main(int argc, char** argv) {
 		return -4;
 	}
 
+	printf("Found %lu superhalos.\n", superhalos.getSuperhalos().size());
+
 	libconfig::Config superhalo_config;
 	superhalos.setConfigObject(superhalo_config);
 
 	superhalo_config.write(output_file);
+
+	printf("Wrote superhalos to (%s)\n", output_filepath.c_str()); 
 
 	fclose(output_file);
 
