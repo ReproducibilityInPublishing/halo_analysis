@@ -446,7 +446,10 @@ class halo_superobject(object):
         return data_manager
 
     def __getitem__(self, key):
-        return self.sim_halos[key]
+        return self.halos[key]
+
+    def __len__(self):
+        return len(self.halos)
 
 class catalog_helper(object):
     def __init__(self, catalog_ds, sim_num, banned_fields = []):

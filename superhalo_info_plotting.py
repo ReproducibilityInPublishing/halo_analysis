@@ -131,6 +131,7 @@ for i in range(len(superhalos)):
     plt.xlabel("Mass [%s]" % masses.array.units)
     plt.savefig("%s/mass.png" % superhalo_dir)
     plt.close()
+    halostats.write("Made up from %i simulations\n" % int(len(superhalo)))
     halostats.write("--Pre Calculated--\n")
     halostats.write("Mass Mean: %.5e %s\n" % (float(superhalo.mass_mean), superhalo.mass_mean.units))
     halostats.write("Mass Root Var: %.5e %s\n" % (float(superhalo.mass_root_variance), superhalo.mass_root_variance.units))
