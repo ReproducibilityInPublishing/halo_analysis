@@ -55,7 +55,7 @@ int ReadHaloConfigFile(const std::string& filepath, libconfig::Config& config) {
 	}
 	try {
 		config.read(config_file);
-	} catch (libconfig::ParseException e) {
+	} catch (libconfig::ParseException& e) {
 		printf("There was a problem parsing!\n");
 		printf("%s:%i: %s\n", e.getFile(), e.getLine(), e.getError());
 		fclose(config_file);
@@ -89,7 +89,7 @@ int GetSpecialNamedValueValue(const libconfig::Setting& setting, const std::stri
 	try {
 		value = setting[name.c_str()].lookup("value");
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
@@ -103,7 +103,7 @@ int GetSpecialNamedValueValue(const libconfig::Setting& setting, const std::stri
 	try {
 		value = setting[name.c_str()].lookup("value").c_str();
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
@@ -116,7 +116,7 @@ int GetSpecialNamedValueUnit(const libconfig::Setting& setting, const std::strin
 	try {
 		unit = setting[name.c_str()].lookup("unit").c_str();
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
@@ -151,7 +151,7 @@ int GetNamedValue(const libconfig::Setting& setting, const std::string& name, T&
 	try {
 		value = setting.lookup(name);
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
@@ -165,7 +165,7 @@ int GetNamedValue(const libconfig::Setting& setting, const std::string& name, st
 	try {
 		value = setting.lookup(name).c_str();
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("There was a setting type exception for setting (%s)!\n", e.getPath());
 		return -2;
 	}
@@ -177,10 +177,10 @@ int WriteDoubleSpecialValue(libconfig::Setting& setting, const std::string& name
 		new_val_setting.add("value", libconfig::Setting::TypeFloat) = value;
 		new_val_setting.add("unit", libconfig::Setting::TypeString) = unit.c_str();
 		return 0;
-	} catch (libconfig::SettingTypeException e) {
+	} catch (libconfig::SettingTypeException& e) {
 		printf("SettingTypeException encountered for (%s)\n", e.getPath());
 		return -1;
-	} catch (libconfig::SettingNameException e) {
+	} catch (libconfig::SettingNameException& e) {
 		printf("SettingNameException encountered for (%s)\n", e.getPath());
 		return -2;
 	} catch (...) {
