@@ -313,25 +313,28 @@ int Halo::setFromSetting(const libconfig::Setting& halo_setting) {
 double HaloDistance(Halo& A, Halo& B) {
 	double metric = 0.;
 
+	static const double mass_weight = 2.;
 	static const double mass_factor = 1./3.;
 	double mass_part_A = std::fabs(A.getParticleMass()-B.getParticleMass());
 	double mass_part_B = std::fabs((1./A.getParticleMass())-(1./B.getParticleMass()));
-	metric += (mass_part_A*mass_part_B)/(2*mass_factor);
+	metric += mass_weight*((mass_part_A*mass_part_B)/(2*mass_factor));
 
+	static const double radius_weight = 1.;
 	static const double radius_factor = 0.25/4.1;
 	double radius_part_A = std::fabs(A.getVirialRadius()-B.getVirialRadius());
 	double radius_part_B = std::fabs((1./A.getVirialRadius())-(1./B.getVirialRadius()));
-	metric += (radius_part_A*radius_part_B)/(2*radius_factor);
+	metric += radius_weight*((radius_part_A*radius_part_B)/(2*radius_factor));
 
+	static const double position_weight = 0.5;
 	static const double position_factor = 0.25e23; // in 'cm'
 	double pos_part_x = std::fabs(A.getOrigParticlePosition(0)-B.getOrigParticlePosition(0));
-	metric += pos_part_x/position_factor;
+	metric += position_weight*(pos_part_x/position_factor);
 
 	double pos_part_y = std::fabs(A.getOrigParticlePosition(1)-B.getOrigParticlePosition(1));
-	metric += pos_part_y/position_factor;
+	metric += position_weight*(pos_part_y/position_factor);
 
 	double pos_part_z = std::fabs(A.getOrigParticlePosition(2)-B.getOrigParticlePosition(2));
-	metric += pos_part_z/position_factor;
+	metric += position_weight*(pos_part_z/position_factor);
 
 	return metric;
 }

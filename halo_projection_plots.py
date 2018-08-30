@@ -31,9 +31,10 @@ ds = yt.load(path_man.get_dataset_path())
 hc = HaloCatalog(halos_ds=catalog_ds, output_dir=path_man.get_rockstar_catalogue_dirname())
 
 for axis in "xyz":
-   p = yt.ProjectionPlot(ds, axis, "density", center=([0,0,0],"Mpc"))
+   p = yt.ProjectionPlot(ds, axis, "density", center=([0,0,0],"Mpc"), fontsize=24)
    #p = yt.ProjectionPlot(ds, axis, "density")
-   p.set_buff_size(1600)
+   p.set_buff_size(2400)
+   p.set_zlim('density', 1e-6,5e-2)
    #p.annotate_halos(hc, annotate_field = 'particle_identifier', radius_field = 'radius_200', center_field_prefix= "halo_position")
    p.annotate_halos(hc, annotate_field = 'particle_identifier')
    p.save(path_man.get_rockstar_catalogue_dirname()+"/projection_%s_orig.png" % axis)
